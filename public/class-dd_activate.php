@@ -75,7 +75,10 @@ class DD_Activate {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
-		add_action( 'admin_post_submit-code', array( $this, 'activate_code' ) );
+		add_action( 'admin_post_submit-code', array( $this, 'activate_code' ) );		
+				// Create end-points
+		add_filter('query_vars', array($this, 'query_vars'));
+		add_action('parse_request', array($this, 'parse_request'));
 
 	}
 
@@ -275,6 +278,28 @@ class DD_Activate {
 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
 	}
 	
+
+	/**
+	* Allow for custom query variables
+	*/
+	public function query_vars($query_vars)
+	{
+		$query_vars[] = 'reactive_user';
+		return $query_vars;
+	}
+	
+	/**
+	* Parse the request
+	*/
+	public function parse_request(&$wp)
+	{
+		if(array_key_exists('reactive_user', $wp->query_vars))
+		{
+			$this->activate_code();
+			exit;
+		}
+	}
+	
 	/**
 	 * Is access code valid?
 	*/
@@ -309,11 +334,6 @@ class DD_Activate {
 	public function activate_code(){
 		
 		global $wpdb;
-		
-		echo '<pre>';
-		print_r($_POST);
-		echo '</pre>';
-		exit();
 		
 		$page = get_ID_by_slug('reactiver-votre-compte');
 		
