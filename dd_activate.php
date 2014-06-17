@@ -45,6 +45,14 @@ register_deactivation_hook( __FILE__, array( 'DD_Activate', 'deactivate' ) );
  */
 add_action( 'plugins_loaded', array( 'DD_Activate', 'get_instance' ) );
 
+/**
+ * Shortcodes
+*/
+
+add_shortcode( 'code_reactivation', array( 'DD_Activate', 'activeUserAccount' ) );
+add_shortcode( 'code_activation', array( 'DD_Activate', 'accessCodeForm' ) );
+
+
 /*----------------------------------------------------------------------------*
  * Dashboard and Administrative Functionality
  *----------------------------------------------------------------------------*/

@@ -74,8 +74,7 @@ class DD_Activate {
 		// Load public-facing style sheet and JavaScript.
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-
-		add_action( 'admin_post_submit-code', array( $this, 'activate_code' ) );		
+				
 				// Create end-points
 		add_filter('query_vars', array($this, 'query_vars'));
 		add_action('parse_request', array($this, 'parse_request'));
@@ -278,6 +277,115 @@ class DD_Activate {
 		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
 	}
 	
+		
+	public function activeUserAccount( $atts = NULL ){
+		
+		// Get arguments passed
+		$args = shortcode_atts( array('edition' => '2012/2013' ), $atts );
+		
+		// Get arg
+		$edition   = $args['edition'];
+		
+		// Dates to test
+		$today     = date('Y-m-d');
+		$thisyear  = date('Y');
+		$yearEnd   = date('Y-m-d', strtotime('12/31'));
+		$nextYear  = strtotime(date("Y-m-d", strtotime($yearEnd)) . " +1 year");
+		$bookIsOut = $thisyear.'-11-15';
+		
+		$end  = ( ($today < $bookIsOut) ? $yearEnd : $nextYear);
+		$end  = mysql2date('j F Y', $end );
+		
+		// passing the user
+		$user = (!empty($_REQUEST['user']) ? $_REQUEST['user'] : null); 
+		
+		
+		
+		// Start buffer!!!
+		ob_start(); ?>
+		
+		<div class="row top-buffer">
+			<div class="col-sm-4">
+				<img src="<?php echo get_bloginfo('template_directory');?>/assets/img/book.png" alt="livre le droit pour le praticien" />
+			</div>
+			<div class="col-sm-8">
+			
+				<?php $dateValide = get_user_meta($user, 'date_abo_active', true);  ?>
+				<h4 class="sectionTitre">
+					<?php if(!empty($dateValide)){ ?>La validité de votre compte est arrivé à expiration.<?php } else{ ?>Activation de votre compte sur le site<?php } ?>					
+				</h4>
+				
+				<p>Afin de d'activer votre compte sur le site, merci d'indiquer le code d'accès obtenu sur le livre "<strong>Le droit pour le praticien</strong>" 
+				édition <strong><?php echo $edition; ?></strong>.</p>
+				<p>Votre compte sera alors actif jusqu'au <?php echo $end; ?></p>	
+		
+				<form class="form-horizontal top-buffer codeaccess" method="post" role="form" action="">	
+					<?php if($user){ ?><input type="hidden" name="user" id="user" value="<?php echo $user; ?>" /><?php } ?>	
+					<input type="hidden" name="reactive_user" value="1" />		
+					<div class="form-group">
+						<label for="codeaccess" class="col-sm-3 control-label">Code d'accès</label>
+						<div class="col-sm-7">
+							<div class="input-group">
+						      <input type="text" class="form-control" id="accescode" name="accescode" size="20" placeholder="Code">				
+						      <span class="input-group-btn">
+						         <button type="submit" class="btn btn-buy">Envoyer</button>
+						      </span>
+						    </div>				    
+						</div>
+					</div>	
+				</form>		
+				<?php  
+					if(isset($_GET['error']))
+					{
+						$errorCodes = array(1 => 'Le code n\'est pas valide' , 2 => 'Merci d\'indiquer un code d\'accès');
+						echo '<p class="bg-danger text-danger">&nbsp;
+								<span class="glyphicon glyphicon-ban-circle"></span> &nbsp;'.$errorCodes[$_GET['error']].'</p>';
+					}
+				?>	
+			</div>
+		</div>
+		
+		<?php
+		$content = ob_get_clean();
+			 
+		return $content;		
+	}
+	
+	/**
+	 *  Shortcode for form to acces code validation
+	*/
+	public function accessCodeForm($atts){
+
+		// Start buffer!!!
+		ob_start(); ?>
+		<!-- Acces code bloc -->
+		<div id="access">
+			<h2>S'inscrire sur le site</h2>	
+			<?php  
+				if(isset($_GET['activation']))
+				{
+					$errorCodes = array(1 => '&nbsp;<span class="glyphicon glyphicon-ban-circle"></span> &nbsp;Le code n\'est pas valide' , 2 => 'Merci d\'indiquer un code d\'accès');
+					echo '<p class="text-danger">'.$errorCodes[$_GET['activation']].'</p>';
+				}
+			?>									
+	  		<form name="accessform" id="accessform" action="" method="post">
+				<p class="login-password">
+					<label for="activecode">Code d'accès</label>
+					<input type="text" class="form-control" id="activecode" name="activecode" size="20" placeholder="Code">	
+				</p>
+				<input type="hidden" name="active_user" value="1" />	
+				<a href="mailto:cindy.leschaud@unine.ch">Problème avec votre code d'accès?</a>
+				<p class="login-submit">
+					<input type="submit" name="wp-submit" id="wp-submit" class="btn btn-buy" value="Envoyer &raquo;" tabindex="100" />
+				</p>						
+			</form>									
+		</div>	
+		<!-- end Acces code bloc -->	
+		<?php
+		$content = ob_get_clean();
+			 
+		return $content;
+	}
 
 	/**
 	* Allow for custom query variables
@@ -285,6 +393,7 @@ class DD_Activate {
 	public function query_vars($query_vars)
 	{
 		$query_vars[] = 'reactive_user';
+		$query_vars[] = 'active_user';
 		return $query_vars;
 	}
 	
@@ -292,12 +401,18 @@ class DD_Activate {
 	* Parse the request
 	*/
 	public function parse_request(&$wp)
-	{
-		if(array_key_exists('reactive_user', $wp->query_vars))
+	{			
+		if(array_key_exists('active_user', $wp->query_vars))
 		{
 			$this->activate_code();
 			exit;
-		}
+		}	
+		
+		if(array_key_exists('reactive_user', $wp->query_vars))
+		{
+			$this->reactivate_code();
+			exit;
+		}	
 	}
 	
 	/**
@@ -332,6 +447,43 @@ class DD_Activate {
 	 *  Function for activation of user account with code
 	*/
 	public function activate_code(){
+		
+		global $wpdb;
+
+		$page = get_ID_by_slug('inscription-sur-le-site');
+			
+		$code = (!empty($_POST['activecode']) ? $_POST['activecode'] : null);
+
+		if( $code )
+		{
+			// test if code is valid and return infos id and validity
+			$isValid = $this->isCodeAccessValid($code);
+			
+			if( $isValid )
+			{	
+				wp_redirect( get_permalink($page) ); exit;		
+			}
+			else
+			{
+				// Return url
+				$url = add_query_arg( array( 'activation' => 1) , home_url() );
+								
+				wp_redirect( $url ); exit;
+			}
+		}
+		else
+		{
+			// Return url
+			$url = add_query_arg( array( 'activation' => 2) , home_url()  );
+			
+			wp_redirect( $url ); exit;
+		}
+	}
+	
+	/**
+	 *  Function for reactivation of user account with code
+	*/
+	public function reactivate_code(){
 		
 		global $wpdb;
 		
@@ -398,5 +550,7 @@ class DD_Activate {
 			wp_redirect( $url ); exit;
 		}
 	}
+	
+
 
 }
