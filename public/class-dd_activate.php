@@ -528,29 +528,22 @@ class DD_Activate {
 				 }
 					
 				// Return url
-				$url = add_query_arg( array('reactivate' => 'ok') ,  site_url() );
-				
-				wp_redirect( $url ); exit;
-		
+				$url = add_query_arg( array('reactivate' => 'ok') ,  site_url() );				
+				wp_redirect( $url ); exit;		
 			}
 			else
 			{
 				// Return url
-				$url = add_query_arg( array('user' => $user , 'error' => 1) , get_permalink($page) );
-								
+				$url = add_query_arg( array('user' => $user , 'error' => 1) , get_permalink($page) );								
 				 wp_redirect( $url ); exit;
 			}
-
 		}
 		else
 		{
 			// Return url
-			$url = add_query_arg( array('user' => $user , 'error' => 2) , get_permalink($page) );
-			
+			$url = add_query_arg( array('user' => $user , 'error' => 2) , get_permalink($page) );			
 			wp_redirect( $url ); exit;
 		}
 	}
-	
-
 
 }
