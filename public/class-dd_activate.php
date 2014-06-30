@@ -521,6 +521,12 @@ class DD_Activate {
 				 {
 					 update_user_meta( $user, 'date_abo_active', $newyear );
 					 
+					 // Get user email
+					 $userinfo = get_userdata( $user );
+					 $email    = $userinfo->user_email;
+					 // Add to list newsletter
+					 $this->addUserList($email);
+					 
 					 //login
 			         wp_set_current_user($user, $user_login);
 			         wp_set_auth_cookie($user);
@@ -544,6 +550,54 @@ class DD_Activate {
 			$url = add_query_arg( array('user' => $user , 'error' => 2) , get_permalink($page) );			
 			wp_redirect( $url ); exit;
 		}
+	}
+	
+	public function curlUrl($url,$fields){
+				
+		$fields_string = '';
+		
+		//url-ify the data for the POST
+		foreach($fields as $key => $value) { $fields_string .= $key.'='.$value.'&'; }
+		
+		rtrim($fields_string,'&');
+		
+		//open connection
+		$ch = curl_init();
+		
+		//set the url, number of POST vars, POST data
+		curl_setopt($ch,CURLOPT_URL,$url);
+		curl_setopt($ch,CURLOPT_POST,count($fields));
+		curl_setopt($ch,CURLOPT_POSTFIELDS,$fields_string);
+		curl_setopt($ch,CURLOPT_RETURNTRANSFER, 1);
+		
+		//execute post
+		$result = curl_exec($ch);
+			
+		curl_close($ch);
+		
+		return $result;	
+	}
+	
+	public function addUserList($email){
+		
+		$username = 'cindy.leschaud@gmail.com';
+	    $apikey   = '15663da1-b7ed-4ba5-b305-c807d1d49693';
+	    
+	    $list  = get_option('dd_newsletter_list'); 
+		
+		//set url
+		$url = 'https://api.elasticemail.com/lists/create-contact';		
+	
+		//set POST variables
+		$fields = array(
+			'username' =>urlencode($username),
+			'api_key'  =>urlencode($apikey),
+			'email'    =>urlencode($email),
+			'listname' =>urlencode($list)
+		);
+		
+		return $this->curlUrl($url,$fields);
+
 	}
 
 }
